@@ -26,6 +26,33 @@ sub usage {
 	print "    -h\t\tThis message\n";
 }
 
+# Splits the readline arguments.
+sub split_arguments {
+	my ($line) = @_;
+
+	my @args = split(/\s/, $line);
+	shift @args;
+
+	return @args;
+}
+
+# Prints a task item.
+sub print_task {
+	my ($task) = @_;
+
+	my $state = "[ ]";
+	my $msg = $task->{"msg"};
+
+	# Check if the state is "done".
+	if ($task->{"done"}) {
+		$state = colored("[", "red") . "x" . colored("]", "red");
+	}
+
+	# Print the task.
+	print "    $state $msg\n";
+}
+
+# Parses the tasks file.
 sub parse_tasks {
 	my ($filename) = @_;
 
@@ -59,43 +86,56 @@ sub parse_tasks {
 	return @tasks;
 }
 
+# Prints a list of tasks.
 sub list_tasks {
 	my (@tasks) = @_;
 
 	# Read each line.
 	foreach my $task (@tasks) {
-		my $state = " ";
-		my $msg = $task->{"msg"};
-
-		# Check if the task is done.
-		if ($task->{"done"}) {
-			$state = "x";
-		}
-
-		# Print the task.
-		print "    [$state] $msg\n";
+		print_task($task);
 	}
 }
 
+# Marks a task as...
+sub mark_task {
+	my ($mark_as, $args, @tasks) = @_;
+
+	if ($mark_as eq "done") {
+		# Mark as done.
+		foreach my $index (split(" ", $args)) {
+			my $task = $tasks[$index - 1];
+
+			$task->{"done"} = 1;
+			print_task($task);
+		}
+	}
+}
+
+# Mains.
 sub main {
 	my $term = Term::ReadLine->new("tdo");
-	my $prompt = ": ";
+	my $prompt = ":";
 	my $OUT = $term->OUT || \*STDOUT;
 
 	my @tasks = parse_tasks("TODO");
 	list_tasks(@tasks);
 
+	# TODO: Put the readline loop in its own sub.
 	while (defined($_ = $term->readline($prompt))) {
 		my $command = $_;
 
+		# TODO: Add a command to reload the file.
+
 		if ($command =~ /^(q|quit|exit)$/i) {
 			exit;
+		} elsif ($command =~ /^(l|list)/i) {
+			# Get the arguments.
+			my @args = split_arguments($command);
+			list_tasks(@tasks);
 		} elsif ($command =~ /^(d|done)/i) {
 			# Get the arguments.
-			my @args = split(/\s/, $command);
-			shift @args;
-
-			print Dumper(\@args);
+			my @args = split_arguments($command);
+			mark_task("done", join(" ", @args), @tasks);
 		}
 
 		# Add command to the history if it isn't empty.
