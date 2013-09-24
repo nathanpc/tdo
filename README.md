@@ -1,3 +1,3 @@
 # tdo
 
-The easiest and geekiest way to manager your TODOs.
+The easiest and geekiest way to manage your TODOs.
