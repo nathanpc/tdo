@@ -57,7 +57,7 @@ sub parse_tasks {
 	my ($filename) = @_;
 
 	my @tasks;
-	open(TODO, "<", $filename) or die "Couldn't open TODO: $!";
+	open(TODO, "<", $filename) or die "Couldn't open $filename: $!";
 
 	# Read each line.
 	while (my $line = <TODO>) {
@@ -113,29 +113,43 @@ sub mark_task {
 
 # Mains.
 sub main {
+	# Setup the readline stuff.
 	my $term = Term::ReadLine->new("tdo");
 	my $prompt = ":";
 	my $OUT = $term->OUT || \*STDOUT;
 
-	my @tasks = parse_tasks("TODO");
+	my $filename = "TODO";
+	my @tasks = parse_tasks($filename);
 	list_tasks(@tasks);
 
 	# TODO: Put the readline loop in its own sub.
 	while (defined($_ = $term->readline($prompt))) {
 		my $command = $_;
 
-		# TODO: Add a command to reload the file.
-
 		if ($command =~ /^(q|quit|exit)$/i) {
 			exit;
 		} elsif ($command =~ /^(l|list)/i) {
-			# Get the arguments.
+			# List tasks.
 			my @args = split_arguments($command);
 			list_tasks(@tasks);
 		} elsif ($command =~ /^(d|done)/i) {
-			# Get the arguments.
+			# Mark a task as done.
 			my @args = split_arguments($command);
 			mark_task("done", join(" ", @args), @tasks);
+		} elsif ($command =~ /^(r|reload|refresh)/i) {
+			# Reload the file.
+			@tasks = parse_tasks($filename);
+			list_tasks(@tasks);
+		} elsif ($command =~ /^(o|open)/i) {
+			# Open a file.
+			my @args = split_arguments($command);
+
+			# Load the new file.
+			$filename = $args[0];
+			@tasks = parse_tasks($filename);
+
+			# List the tasks.
+			list_tasks(@tasks);
 		}
 
 		# Add command to the history if it isn't empty.
