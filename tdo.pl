@@ -103,10 +103,10 @@ sub parse_tasks {
 
 # Save a TODO list.
 sub save_todo {
-	my ($filename, $tasks) = @_;
+	my ($filename, @tasks) = @_;
 
 	open(my $todo, ">", $filename) or warn "Cannot open $filename: $!";
-	foreach my $task ($tasks) {
+	foreach my $task (@tasks) {
 		my $state = "-";
 
 		if ($task->{"done"}) {
@@ -185,6 +185,7 @@ sub main {
 			# Mark a task as done.
 			my @args = split_arguments($command);
 			mark_task("done", join(" ", @args), @tasks);
+			save_todo($filename, @tasks);
 		} elsif ($command =~ /^(r|reload|refresh)/i) {
 			# Reload the file.
 			@tasks = parse_tasks($filename);
@@ -204,7 +205,7 @@ sub main {
 			$command =~ s/^(a|add)\s//i;
 
 			add_task($command, \@tasks);
-			print "save here"; ### 
+			save_todo($filename, @tasks);
 			list_tasks(@tasks);
 		}
 
