@@ -11,7 +11,6 @@
 
 use strict;
 use warnings;
-use Data::Dumper;
 
 use Getopt::Long;
 use Term::ANSIColor;
@@ -68,36 +67,37 @@ sub parse_tasks {
 	my ($filename) = @_;
 
 	my @tasks;
-	open(TODO, "<", $filename) or die "Couldn't open $filename: $!";
+	if (open(TODO, "<", $filename)) {
+		# Read each line.
+		while (my $line = <TODO>) {
+			chomp $line;
 
-	# Read each line.
-	while (my $line = <TODO>) {
-		chomp $line;
+			my @part = $line =~ /^(\s[-x!]\s)|(.+)$/gi;
+			my $done = 0;
+			my $important = 0;
+			my $msg = $part[3];
 
-		my @part = $line =~ /^(\s[-x!]\s)|(.+)$/gi;
-		my $done = 0;
-		my $important = 0;
-		my $msg = $part[3];
+			# Check if the task is done or important.
+			if ($part[0] =~ /x/) {
+				$done = 1;
+			} elsif ($part[0] =~ /!/) {
+				$important = 1;
+			}
 
-		# Check if the task is done or important.
-		if ($part[0] =~ /x/) {
-			$done = 1;
-		} elsif ($part[0] =~ /!/) {
-			$important = 1;
+			# Create the task hash.
+			my $task = {
+				"done"      => $done,
+				"important" => $important,
+				"msg"       => $msg
+			};
+
+			# Add the task.
+			push(@tasks, $task);
 		}
 
-		# Create the task hash.
-		my $task = {
-			"done"      => $done,
-			"important" => $important,
-			"msg"       => $msg
-		};
-
-		# Add the task.
-		push(@tasks, $task);
+		close(TODO);
 	}
 
-	close(TODO);
 	return @tasks;
 }
 
@@ -167,11 +167,13 @@ sub main {
 	my $prompt = ":";
 	my $OUT = $term->OUT || \*STDOUT;
 
-	my $filename = "TODO";
+	# Default global TODO location.
+	my $filename = glob("TODO-test");
+
 	my @tasks = parse_tasks($filename);
 	list_tasks(@tasks);
 
-	# TODO: Put the readline loop in its own sub.
+	# Readline loop
 	while (defined($_ = $term->readline($prompt))) {
 		my $command = $_;
 
@@ -195,7 +197,7 @@ sub main {
 			my @args = split_arguments($command);
 
 			# Load the new file.
-			$filename = $args[0];
+			$filename = glob($args[0]);
 			@tasks = parse_tasks($filename);
 
 			# List the tasks.
