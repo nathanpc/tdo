@@ -5,14 +5,11 @@
 # The easiest way to manage your TODOs.
 
 # TODO:
-#   - Have a global TODO list.
-#   - Check for local TODO lists.
 #   - Maybe: Read source code files for TODO comments.
 
 use strict;
 use warnings;
 
-use Getopt::Long;
 use Term::ANSIColor;
 use Term::ReadLine;
 
@@ -96,6 +93,8 @@ sub parse_tasks {
 		}
 
 		close(TODO);
+	} else {
+		print "Created a new TODO file\n";
 	}
 
 	return @tasks;
@@ -168,8 +167,23 @@ sub main {
 	my $OUT = $term->OUT || \*STDOUT;
 
 	# Default global TODO location.
-	my $filename = glob("TODO-test");
+	my $filename;
 
+	# Default global TODO location.
+	$filename = glob("~/TODO");
+
+	# Use supplied file.
+	if (defined $ARGV[0]) {
+		# Check if the user wants the global TODO
+		if ($ARGV[0] ne "-g") {
+			$filename = glob($ARGV[0]);
+		}
+	} elsif (-e "TODO") {
+		# Check for a local TODO.
+		$filename = glob("TODO");
+	}
+
+	# Parse and list.
 	my @tasks = parse_tasks($filename);
 	list_tasks(@tasks);
 
