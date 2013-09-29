@@ -30,8 +30,14 @@ sub usage {
 sub split_arguments {
 	my ($line) = @_;
 
-	my @args = split(/\s/, $line);
+	# Split the arguments.
+	my @args = $line =~ /(?:[^\s"]+|"[^"]*")+/g;
 	shift @args;
+
+	# Clean the arguments.
+	foreach my $item (@args) {
+		$item =~ s/(^")|("$)//g;
+	}
 
 	return @args;
 }
@@ -46,6 +52,11 @@ sub print_task {
 	# Check if the state is "done".
 	if ($task->{"done"}) {
 		$state = colored("[", "red") . "x" . colored("]", "red");
+	}
+
+	# Check if the state is "important".
+	if ($task->{"important"}) {
+		$msg = colored($msg, "black on_white");
 	}
 
 	# Print the task.
@@ -63,19 +74,23 @@ sub parse_tasks {
 	while (my $line = <TODO>) {
 		chomp $line;
 
-		my @part = $line =~ /^(\s[-x]\s)|(.+)$/gi;
-		my $state = 0;
+		my @part = $line =~ /^(\s[-x!]\s)|(.+)$/gi;
+		my $done = 0;
+		my $important = 0;
 		my $msg = $part[3];
 
-		# Check if the task is done.
+		# Check if the task is done or important.
 		if ($part[0] =~ /x/) {
-			$state = 1;
+			$done = 1;
+		} elsif ($part[0] =~ /!/) {
+			$important = 1;
 		}
 
 		# Create the task hash.
 		my $task = {
-			"done" => $state,
-			"msg"   => $msg
+			"done"      => $done,
+			"important" => $important,
+			"msg"       => $msg
 		};
 
 		# Add the task.
@@ -84,6 +99,25 @@ sub parse_tasks {
 
 	close(TODO);
 	return @tasks;
+}
+
+# Save a TODO list.
+sub save_todo {
+	my ($filename, $tasks) = @_;
+
+	open(my $todo, ">", $filename) or warn "Cannot open $filename: $!";
+	foreach my $task ($tasks) {
+		my $state = "-";
+
+		if ($task->{"done"}) {
+			$state = "x";
+		} elsif ($task->{"important"}) {
+			$state = "!";
+		}
+
+		print $todo "\t$state " . $task->{"msg"} . "\n";
+	}
+	close($todo);
 }
 
 # Prints a list of tasks.
@@ -109,6 +143,21 @@ sub mark_task {
 			print_task($task);
 		}
 	}
+}
+
+# Add a new task.
+sub add_task {
+	my ($msg, $tasks) = @_;
+
+	# Create the task hash.
+	my $task = {
+		"done"      => 0,
+		"important" => 0,
+		"msg"       => $msg
+	};
+
+	# Add the task.
+	unshift($tasks, $task);
 }
 
 # Mains.
@@ -149,6 +198,13 @@ sub main {
 			@tasks = parse_tasks($filename);
 
 			# List the tasks.
+			list_tasks(@tasks);
+		} elsif ($command =~ /^(a|add)/i) {
+			# Add a new task.
+			$command =~ s/^(a|add)\s//i;
+
+			add_task($command, \@tasks);
+			print "save here"; ### 
 			list_tasks(@tasks);
 		}
 
